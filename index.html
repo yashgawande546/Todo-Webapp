@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindMemos</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="shortcut icon" href="mind-mapping.png" type="image/x-icon">
+</head>
+<body class="bg-purple-900 text-white font-sans overflow-hidden">
+
+    <header class="bg-purple-900 p-4 flex items-center justify-between">
+        <div>
+            <i class="material-icons text-white">menu</i>
+        </div>
+        <div>
+            <h1 class="text-lg">Mind Memos</h1>
+        </div>
+        <div>
+            <span class="text-white">🪙 0</span>
+        </div>
+    </header>
+
+    <style>
+        #taskList {
+            max-height: 78vh;
+        }
+    </style>
+
+    <main class="p-4 overflow-hidden">
+        <div class="my-5">
+            <div class="mb-5">
+                <label for="task_entry" class="text-white">Add a new memo</label>
+                <input type="text" id="task_entry" placeholder="Type your memo here.." class="w-full p-3 bg-white38 rounded-2xl border border-white60 text-purple-900 focus:border-amber-500 focus:bg-white30 text-xl">
+            </div>
+
+            <div id="taskList" class="space-y-4 mb-4 pb-3 overflow-y-auto">
+                <!-- Tasks will be added dynamically here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        $(document).ready(function () {
+            loadSavedTasks();
+
+            $('#task_entry').on('keypress', function (e) {
+                if (e.which === 13) {
+                    createTask();
+                }
+            });
+
+            $('#task_entry').on('submit', function () {
+                createTask();
+            });
+
+            function deleteTask(button) {
+                let taskItem = $(button).closest('.task-item');
+                taskItem.fadeOut(300, function () {
+                    taskItem.remove();
+                    updateLocalStorage();
+                });
+            }
+
+            function createTask() {
+                let taskEntryValue = $('#task_entry').val();
+                let dt = new Date();
+                let time = `${dt.getHours()}:${dt.getMinutes()}:${dt.getSeconds()}`;
+                let taskHtml = `
+                    <div class="task-item bg-white p-4 rounded-xl border border-black text-black flex flex-row justify-between">
+                        <div class="text-lg font-bold mb-1 flex flex-col ">${taskCount()}. ${taskEntryValue}<span class="text-sm text-gray-500 mb-0">${time}</span></div>
+                        <div class="flex justify-end space-x-2">
+                            <button class="text-green-500 hover:text-green-700" title="Start record"><i class="material-icons p-2 rounded-full hover:bg-gray-300">play_circle_filled</i></button>
+                            <button class="text-red-500 hover:text-red-700" title="Stop record"><i class="material-icons p-2 rounded-full hover:bg-gray-300">pause_circle_filled</i></button>
+                            <button class="text-red-500 hover:text-red-700 delete-btn" title="Delete memo" onclick="deleteTask(this)"><i class="material-icons p-2 rounded-full hover:bg-gray-300">delete</i></button>
+                        </div>
+                    </div>
+                `;
+
+                $('#taskList').append(taskHtml);
+                saveTask(taskEntryValue, time);
+                $('#task_entry').val('');
+            }
+
+            function taskCount() {
+                return $('#taskList .task-item').length + 1;
+
+            }
+
+            function saveTask(task, time) {
+                let currentDate = new Date().toLocaleDateString();
+                let savedTasks = JSON.parse(localStorage.getItem(currentDate)) || [];
+                savedTasks.push({ task, time });
+                localStorage.setItem(currentDate, JSON.stringify(savedTasks));
+            }
+
+            function loadSavedTasks() {
+                let currentDate = new Date().toLocaleDateString();
+                let savedTasks = JSON.parse(localStorage.getItem(currentDate)) || [];
+                savedTasks.forEach((savedTask) => {
+                    let taskHtml = `
+                        <div class="task-item bg-white p-4 rounded-xl border border-black text-black flex flex-row justify-between">
+                            <div class="text-lg font-bold mb-1 flex flex-col ">${taskCount()}. ${savedTask.task}<span class="text-sm text-gray-500 mb-0">${savedTask.time}</span></div>
+                            <div class="flex justify-end space-x-2">
+                                <button class="text-green-500 hover:text-green-700" title="Start record"><i class="material-icons p-2 rounded-full hover:bg-gray-300">play_circle_filled</i></button>
+                                <button class="text-red-500 hover:text-red-700" title="Stop record"><i class="material-icons p-2 rounded-full hover:bg-gray-300">pause_circle_filled</i></button>
+                                <button class="text-red-500 hover:text-red-700 delete-btn" title="Delete memo" onclick="deleteTask(this)"><i class="material-icons p-2 rounded-full hover:bg-gray-300">delete</i></button>
+                            </div>
+                        </div>
+                    `;
+                    $('#taskList').append(taskHtml);
+                });
+            }
+
+         
+          
+            window.deleteTask = function(button) {
+                let taskItem = $(button).closest('.task-item');
+                taskItem.fadeOut(300, function () {
+                    taskItem.remove();
+                    updateLocalStorage();
+                    renumberTasks();
+                });
+            }
+
+            function renumberTasks() {
+    $('#taskList .task-item').each(function (index) {
+        let taskItem = $(this);
+        let taskTextElement = taskItem.find('.font-bold');
+        let taskTimeElement = taskItem.find('.text-sm');
+        let taskTime = taskTimeElement.text().trim();
+
+        // Extract existing task text and number
+        let currentText = taskTextElement.text().trim();
+        let match = currentText.match(/^(\d+\.\s)(.+)/);
+
+        if (match) {
+            // Update the task text with the new number
+            taskTextElement.html(`${index + 1}. ${match[2].replace(taskTime,'')}  ${taskTimeElement[0].outerHTML}`);
+        }
+    });
+}
+
+          
+            function updateLocalStorage() {
+                let currentDate = new Date().toLocaleDateString();
+                let tasks = [];
+                $('#taskList .task-item').each(function (index) {
+                    let taskTime = $(this).find('.text-sm').text().trim();
+                    let taskText = $(this).find('.font-bold').text().trim().replace(taskTime,'').replace(/\d+\.\s/, '')
+                    tasks.push({ task: taskText, time: taskTime });
+                    console.log({ task: taskText, time: taskTime })
+                });
+                localStorage.setItem(currentDate, JSON.stringify(tasks));
+            }
+        });
+    </script>
+</body>
+</html>
